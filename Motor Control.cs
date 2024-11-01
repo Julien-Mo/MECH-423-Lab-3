@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Data;
+using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 using static System.Windows.Forms.AxHost;
@@ -10,8 +11,8 @@ namespace MECH_423_Lab_3
 {
     public partial class MotorControl : Form
     {
-        private const double CountsPerRotation = 979.62;
-        private ConcurrentQueue<Int32> dataQueue = new ConcurrentQueue<Int32>();
+        private const double CountsPerRotation = 244;
+        private ConcurrentQueue<Byte> dataQueue = new ConcurrentQueue<Byte>();
         private int state = 0;
         private bool isStepperMotor = true;
         private bool isRunContinuously = true;
@@ -19,14 +20,16 @@ namespace MECH_423_Lab_3
         private byte speedHigh = 0;
         private byte speedLow = 0;
         private byte commandByte = 0;
-        private int countLow = 0;
-        private int countHigh = 0;
-        private int countCommand = 0;
-        private int countCurrent = 0;
-        private int countPrevious = 0;
+        private byte countLow = 0;
+        private byte countHigh = 0;
+        private byte countCommand = 0;
+        private short zeroCount = 0;
+        private short countCurrent = 0;
+        private short countPrevious = 0;
+        private short countTrue = 0;
         private int countDifference = 0;
         private double rotations = 0.0;
-        private int samplingTime = 100; // Change to whatever Grayson says, in ms
+        private int samplingTime = 50; // Change to whatever Grayson says, in ms
         private int time = 0;
 
         public MotorControl()
@@ -138,13 +141,13 @@ namespace MECH_423_Lab_3
             int numberOfTicks = trackBar1.Maximum - trackBar1.Minimum;
 
             // Use the constant value for counts per rotation
-            double scalingFactor = CountsPerRotation / (numberOfTicks / 2.0);
+            double scalingFactor = 65535 / (numberOfTicks / 2.0);
 
             // Map the trackbar value to the duty cycle (0 at middle, countsPerRotation at extremes)
             ushort mappedSpeed = (ushort)(Math.Abs(trackBarValue - numberOfTicks / 2.0) * scalingFactor);
 
             // Update the textbox with the mapped speed
-            textBoxDutyCycle.Text = (mappedSpeed / CountsPerRotation).ToString("P0");
+            textBoxDutyCycle.Text = ((double)mappedSpeed / 65535).ToString("P0");
 
             // Split the mapped speed into two bytes
             speedHigh = (byte)(mappedSpeed >> 8);
@@ -265,7 +268,7 @@ namespace MECH_423_Lab_3
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            int dequeuedItem;
+            byte dequeuedItem;
             while (dataQueue.TryDequeue(out dequeuedItem))
             {
                 switch (state)
@@ -277,18 +280,18 @@ namespace MECH_423_Lab_3
                         }
                         break;
                     case 1:
-                        countHigh = (int)dequeuedItem;
+                        countHigh = dequeuedItem;
                         state = 2;
                         break;
                     case 2:
-                        countLow = (int)dequeuedItem;
+                        countLow = dequeuedItem;
                         state = 3;
                         break;
                     case 3:
-                        countCommand = (int)dequeuedItem;
+                        countCommand = dequeuedItem;
 
                         // D = 1 (Set Duty Cycle High to 255), 0 (Do Nothing)
-                        if ((countCommand & 0b00000001) != 0)
+                        if ((countCommand & 0b00000010) != 0)
                         {
                             countHigh = 255;
                         }
@@ -299,8 +302,12 @@ namespace MECH_423_Lab_3
                             countLow = 255;
                         }
 
+                        lstBoxData.Items.Add((countHigh).ToString() + " " + (countLow).ToString() + " " + (countCommand).ToString());
+                        lstBoxData.SelectedIndex = lstBoxData.Items.Count - 1;
+
                         // Combine countHigh and countLow into one value
-                        countCurrent = (countHigh << 8) | countLow;
+                        countTrue = (short)((countHigh << 8) | countLow);
+                        countCurrent = (short)(countTrue - zeroCount);
                         countDifference = countCurrent - countPrevious;
                         countPrevious = countCurrent;
 
@@ -318,8 +325,12 @@ namespace MECH_423_Lab_3
 
                         // Update chart
                         time += samplingTime;
-                        chart1.Series["Position"].Points.AddXY(time, countCurrent);
-                        chart1.Series["Velocity"].Points.AddXY(time, velocityRPM);
+                        chart1.Series["Position"].Points.AddXY(time/1000.0, countCurrent);
+                        chart1.Series["Velocity"].Points.AddXY(time/1000.0, velocityRPM);
+                        if (chart1.Series["Position"].Points.Count > 200)
+                        {
+                            chart1.ChartAreas["ChartArea1"].Axes[0].Minimum = (time - 200 * samplingTime) / 1000.0;
+                        }
 
                         state = 0;
                         textBoxHigh.Text = countHigh.ToString();
@@ -343,9 +354,14 @@ namespace MECH_423_Lab_3
             while (bytesToRead != 0)
             {
                 newByte = serialPort1.ReadByte();
-                dataQueue.Enqueue(newByte);
+                dataQueue.Enqueue((byte)newByte);
                 bytesToRead = serialPort1.BytesToRead;
             }
+        }
+
+        private void btnZero_Click(object sender, EventArgs e)
+        {
+            zeroCount = countTrue;
         }
     }
 }
