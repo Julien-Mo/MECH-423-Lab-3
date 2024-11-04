@@ -29,9 +29,9 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea1 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
-            System.Windows.Forms.DataVisualization.Charting.Legend legend1 = new System.Windows.Forms.DataVisualization.Charting.Legend();
-            System.Windows.Forms.DataVisualization.Charting.Series series1 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea6 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            System.Windows.Forms.DataVisualization.Charting.Legend legend6 = new System.Windows.Forms.DataVisualization.Charting.Legend();
+            System.Windows.Forms.DataVisualization.Charting.Series series6 = new System.Windows.Forms.DataVisualization.Charting.Series();
             this.textBoxStartByte = new System.Windows.Forms.TextBox();
             this.textBoxDutyCycleHigh = new System.Windows.Forms.TextBox();
             this.textBoxDutyCycleLow = new System.Windows.Forms.TextBox();
@@ -65,6 +65,10 @@
             this.textBoxCombinedCount = new System.Windows.Forms.TextBox();
             this.btnZero = new System.Windows.Forms.Button();
             this.lstBoxData = new System.Windows.Forms.ListBox();
+            this.btnSave = new System.Windows.Forms.Button();
+            this.saveFileDialog = new System.Windows.Forms.SaveFileDialog();
+            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.button1 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.chart1)).BeginInit();
             this.SuspendLayout();
@@ -72,7 +76,7 @@
             // textBoxStartByte
             // 
             this.textBoxStartByte.Location = new System.Drawing.Point(16, 64);
-            this.textBoxStartByte.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.textBoxStartByte.Margin = new System.Windows.Forms.Padding(4);
             this.textBoxStartByte.Name = "textBoxStartByte";
             this.textBoxStartByte.Size = new System.Drawing.Size(132, 22);
             this.textBoxStartByte.TabIndex = 0;
@@ -80,7 +84,7 @@
             // textBoxDutyCycleHigh
             // 
             this.textBoxDutyCycleHigh.Location = new System.Drawing.Point(157, 64);
-            this.textBoxDutyCycleHigh.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.textBoxDutyCycleHigh.Margin = new System.Windows.Forms.Padding(4);
             this.textBoxDutyCycleHigh.Name = "textBoxDutyCycleHigh";
             this.textBoxDutyCycleHigh.Size = new System.Drawing.Size(132, 22);
             this.textBoxDutyCycleHigh.TabIndex = 1;
@@ -88,7 +92,7 @@
             // textBoxDutyCycleLow
             // 
             this.textBoxDutyCycleLow.Location = new System.Drawing.Point(299, 64);
-            this.textBoxDutyCycleLow.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.textBoxDutyCycleLow.Margin = new System.Windows.Forms.Padding(4);
             this.textBoxDutyCycleLow.Name = "textBoxDutyCycleLow";
             this.textBoxDutyCycleLow.Size = new System.Drawing.Size(132, 22);
             this.textBoxDutyCycleLow.TabIndex = 2;
@@ -96,7 +100,7 @@
             // textBoxCommandByte
             // 
             this.textBoxCommandByte.Location = new System.Drawing.Point(440, 64);
-            this.textBoxCommandByte.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.textBoxCommandByte.Margin = new System.Windows.Forms.Padding(4);
             this.textBoxCommandByte.Name = "textBoxCommandByte";
             this.textBoxCommandByte.Size = new System.Drawing.Size(132, 22);
             this.textBoxCommandByte.TabIndex = 3;
@@ -118,7 +122,7 @@
             // btnConnect
             // 
             this.btnConnect.Location = new System.Drawing.Point(299, 11);
-            this.btnConnect.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnConnect.Margin = new System.Windows.Forms.Padding(4);
             this.btnConnect.Name = "btnConnect";
             this.btnConnect.Size = new System.Drawing.Size(275, 26);
             this.btnConnect.TabIndex = 6;
@@ -160,7 +164,7 @@
             // 
             this.comboBoxComPorts.FormattingEnabled = true;
             this.comboBoxComPorts.Location = new System.Drawing.Point(16, 15);
-            this.comboBoxComPorts.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.comboBoxComPorts.Margin = new System.Windows.Forms.Padding(4);
             this.comboBoxComPorts.Name = "comboBoxComPorts";
             this.comboBoxComPorts.Size = new System.Drawing.Size(273, 24);
             this.comboBoxComPorts.TabIndex = 10;
@@ -170,7 +174,7 @@
             // 
             this.trackBar1.Cursor = System.Windows.Forms.Cursors.Hand;
             this.trackBar1.Location = new System.Drawing.Point(16, 96);
-            this.trackBar1.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.trackBar1.Margin = new System.Windows.Forms.Padding(4);
             this.trackBar1.Maximum = 400;
             this.trackBar1.Name = "trackBar1";
             this.trackBar1.Size = new System.Drawing.Size(557, 56);
@@ -182,8 +186,9 @@
             // textBoxDutyCycle
             // 
             this.textBoxDutyCycle.Location = new System.Drawing.Point(440, 149);
-            this.textBoxDutyCycle.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.textBoxDutyCycle.Margin = new System.Windows.Forms.Padding(4);
             this.textBoxDutyCycle.Name = "textBoxDutyCycle";
+            this.textBoxDutyCycle.ReadOnly = true;
             this.textBoxDutyCycle.Size = new System.Drawing.Size(132, 22);
             this.textBoxDutyCycle.TabIndex = 12;
             // 
@@ -201,7 +206,7 @@
             // 
             this.comboBoxMotorType.FormattingEnabled = true;
             this.comboBoxMotorType.Location = new System.Drawing.Point(16, 148);
-            this.comboBoxMotorType.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.comboBoxMotorType.Margin = new System.Windows.Forms.Padding(4);
             this.comboBoxMotorType.Name = "comboBoxMotorType";
             this.comboBoxMotorType.Size = new System.Drawing.Size(132, 24);
             this.comboBoxMotorType.TabIndex = 14;
@@ -242,7 +247,7 @@
             // textBoxNumSteps
             // 
             this.textBoxNumSteps.Location = new System.Drawing.Point(157, 150);
-            this.textBoxNumSteps.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.textBoxNumSteps.Margin = new System.Windows.Forms.Padding(4);
             this.textBoxNumSteps.Name = "textBoxNumSteps";
             this.textBoxNumSteps.Size = new System.Drawing.Size(132, 22);
             this.textBoxNumSteps.TabIndex = 18;
@@ -300,17 +305,17 @@
             // 
             // chart1
             // 
-            chartArea1.Name = "ChartArea1";
-            this.chart1.ChartAreas.Add(chartArea1);
-            legend1.Name = "Legend1";
-            this.chart1.Legends.Add(legend1);
+            chartArea6.Name = "ChartArea1";
+            this.chart1.ChartAreas.Add(chartArea6);
+            legend6.Name = "Legend1";
+            this.chart1.Legends.Add(legend6);
             this.chart1.Location = new System.Drawing.Point(20, 319);
             this.chart1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.chart1.Name = "chart1";
-            series1.ChartArea = "ChartArea1";
-            series1.Legend = "Legend1";
-            series1.Name = "Series1";
-            this.chart1.Series.Add(series1);
+            series6.ChartArea = "ChartArea1";
+            series6.Legend = "Legend1";
+            series6.Name = "Series1";
+            this.chart1.Series.Add(series6);
             this.chart1.Size = new System.Drawing.Size(553, 222);
             this.chart1.TabIndex = 24;
             this.chart1.Text = "chart1";
@@ -318,7 +323,7 @@
             // textBoxHigh
             // 
             this.textBoxHigh.Location = new System.Drawing.Point(20, 257);
-            this.textBoxHigh.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.textBoxHigh.Margin = new System.Windows.Forms.Padding(4);
             this.textBoxHigh.Name = "textBoxHigh";
             this.textBoxHigh.Size = new System.Drawing.Size(132, 22);
             this.textBoxHigh.TabIndex = 25;
@@ -326,7 +331,7 @@
             // textBoxLow
             // 
             this.textBoxLow.Location = new System.Drawing.Point(157, 257);
-            this.textBoxLow.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.textBoxLow.Margin = new System.Windows.Forms.Padding(4);
             this.textBoxLow.Name = "textBoxLow";
             this.textBoxLow.Size = new System.Drawing.Size(132, 22);
             this.textBoxLow.TabIndex = 26;
@@ -345,7 +350,7 @@
             // 
             this.textBoxCombinedCount.ForeColor = System.Drawing.Color.Black;
             this.textBoxCombinedCount.Location = new System.Drawing.Point(300, 257);
-            this.textBoxCombinedCount.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.textBoxCombinedCount.Margin = new System.Windows.Forms.Padding(4);
             this.textBoxCombinedCount.Name = "textBoxCombinedCount";
             this.textBoxCombinedCount.Size = new System.Drawing.Size(132, 22);
             this.textBoxCombinedCount.TabIndex = 28;
@@ -369,11 +374,42 @@
             this.lstBoxData.Size = new System.Drawing.Size(414, 516);
             this.lstBoxData.TabIndex = 30;
             // 
+            // btnSave
+            // 
+            this.btnSave.Location = new System.Drawing.Point(440, 291);
+            this.btnSave.Name = "btnSave";
+            this.btnSave.Size = new System.Drawing.Size(134, 23);
+            this.btnSave.TabIndex = 31;
+            this.btnSave.Text = "Save Series";
+            this.btnSave.UseVisualStyleBackColor = true;
+            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
+            // 
+            // textBox1
+            // 
+            this.textBox1.Location = new System.Drawing.Point(439, 179);
+            this.textBox1.Margin = new System.Windows.Forms.Padding(4);
+            this.textBox1.Name = "textBox1";
+            this.textBox1.Size = new System.Drawing.Size(132, 22);
+            this.textBox1.TabIndex = 32;
+            // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(439, 209);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(75, 23);
+            this.button1.TabIndex = 33;
+            this.button1.Text = "button1";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
+            // 
             // MotorControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1049, 554);
+            this.Controls.Add(this.button1);
+            this.Controls.Add(this.textBox1);
+            this.Controls.Add(this.btnSave);
             this.Controls.Add(this.lstBoxData);
             this.Controls.Add(this.btnZero);
             this.Controls.Add(this.textBoxCombinedCount);
@@ -404,7 +440,7 @@
             this.Controls.Add(this.textBoxDutyCycleLow);
             this.Controls.Add(this.textBoxDutyCycleHigh);
             this.Controls.Add(this.textBoxStartByte);
-            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "MotorControl";
             this.Text = "Motor Control";
             this.Load += new System.EventHandler(this.Form1_Load);
@@ -450,6 +486,10 @@
         private System.Windows.Forms.TextBox textBoxCombinedCount;
         private System.Windows.Forms.Button btnZero;
         private System.Windows.Forms.ListBox lstBoxData;
+        private System.Windows.Forms.Button btnSave;
+        private System.Windows.Forms.SaveFileDialog saveFileDialog;
+        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.Button button1;
     }
 }
 

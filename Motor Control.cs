@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
@@ -362,6 +364,61 @@ namespace MECH_423_Lab_3
         private void btnZero_Click(object sender, EventArgs e)
         {
             zeroCount = countTrue;
+        }
+
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            saveFileDialog.Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*";
+            saveFileDialog.ShowDialog();
+            String fileName = saveFileDialog.FileName;
+            SaveSeriesCollectionToCsv(chart1.Series, fileName);
+        }
+
+        public static void SaveSeriesCollectionToCsv(SeriesCollection seriesCollection, string filePath)
+        {
+            if (seriesCollection == null || !seriesCollection.Any())
+                throw new ArgumentException("The series collection is empty or null.");
+
+            // Determine the maximum number of points in any series
+            int maxPoints = seriesCollection.Max(series => series.Points.Count);
+
+            using (var writer = new StreamWriter(filePath))
+            {
+                // Write header row with series names
+                var header = string.Join(",", seriesCollection.Select(s => s.Name));
+                writer.WriteLine(header);
+
+                // Write each row of data points
+                for (int i = 0; i < maxPoints; i++)
+                {
+                    var row = new List<string>();
+
+                    foreach (var series in seriesCollection)
+                    {
+                        if (i < series.Points.Count)
+                        {
+                            row.Add(series.Points[i].YValues[0].ToString());
+                        }
+                        else
+                        {
+                            row.Add(""); // Fill missing points with empty value
+                        }
+                    }
+
+                    writer.WriteLine(string.Join(",", row));
+                }
+            }
+        }
+
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            int val;
+            int.TryParse(textBox1.Text, out val);
+            System.Console.Out.WriteLine(val.ToString());
+            val = 200 + val * 2;
+            trackBar1.Value = val;
+            trackBar1_Scroll(sender, e);
         }
     }
 }
