@@ -25,7 +25,7 @@ namespace MECH_423_Lab_3
         private byte countLow = 0;
         private byte countHigh = 0;
         private byte countCommand = 0;
-        private short zeroCount = 0;
+        //private short zeroCount = 0;
         private short countCurrent = 0;
         private short countPrevious = 0;
         private short countTrue = 0;
@@ -55,6 +55,7 @@ namespace MECH_423_Lab_3
             Series velocitySeries = new Series("Velocity");
             velocitySeries.ChartType = SeriesChartType.Line;
             chart1.Series.Add(velocitySeries);
+            //chart1.ChartAreas[0].AxisY.Maximum = 400;
         }
 
         private void comboBoxComPorts_SelectedIndexChanged(object sender, EventArgs e)
@@ -308,8 +309,8 @@ namespace MECH_423_Lab_3
                         lstBoxData.SelectedIndex = lstBoxData.Items.Count - 1;
 
                         // Combine countHigh and countLow into one value
-                        countTrue = (short)((countHigh << 8) | countLow);
-                        countCurrent = (short)(countTrue - zeroCount);
+                        countCurrent = (short)((countHigh << 8) | countLow);
+                        //countCurrent = (short)(countTrue - zeroCount);
                         countDifference = countCurrent - countPrevious;
                         countPrevious = countCurrent;
 
@@ -363,7 +364,19 @@ namespace MECH_423_Lab_3
 
         private void btnZero_Click(object sender, EventArgs e)
         {
-            zeroCount = countTrue;
+            // Transmit the command to the COM port
+            if (serialPort1.IsOpen)
+            {
+                try
+                {
+                    byte[] packet = new byte[] { 255, 0, 0, 0b00100000 };
+                    serialPort1.Write(packet, 0, packet.Length);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error: " + ex.Message);
+                }
+            }
         }
 
         private void btnSave_Click(object sender, EventArgs e)
@@ -418,6 +431,12 @@ namespace MECH_423_Lab_3
             System.Console.Out.WriteLine(val.ToString());
             val = 200 + val * 2;
             trackBar1.Value = val;
+            trackBar1_Scroll(sender, e);
+        }
+
+        private void buttonZeroDutyCycle_Click(object sender, EventArgs e)
+        {
+            trackBar1.Value = 200;
             trackBar1_Scroll(sender, e);
         }
     }
