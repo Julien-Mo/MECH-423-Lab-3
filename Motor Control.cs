@@ -6,14 +6,13 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
-using static System.Windows.Forms.AxHost;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace MECH_423_Lab_3
 {
     public partial class MotorControl : Form
     {
         private const double CountsPerRotation = 244;
+        private const int SamplingTime = 50;
         private ConcurrentQueue<Byte> dataQueue = new ConcurrentQueue<Byte>();
         private int state = 0;
         private bool isStepperMotor = true;
@@ -25,13 +24,11 @@ namespace MECH_423_Lab_3
         private byte countLow = 0;
         private byte countHigh = 0;
         private byte countCommand = 0;
-        //private short zeroCount = 0;
         private short countCurrent = 0;
         private short countPrevious = 0;
         private short countTrue = 0;
         private int countDifference = 0;
         private double rotations = 0.0;
-        private int samplingTime = 50; // Change to whatever Grayson says, in ms
         private int time = 0;
 
         public MotorControl()
@@ -55,39 +52,40 @@ namespace MECH_423_Lab_3
             Series velocitySeries = new Series("Velocity");
             velocitySeries.ChartType = SeriesChartType.Line;
             chart1.Series.Add(velocitySeries);
-            //chart1.ChartAreas[0].AxisY.Maximum = 400;
+            chart1.ChartAreas[0].AxisY.Maximum = 400;
+            chart1.ChartAreas[0].AxisY.Minimum = -400;
         }
 
         private void comboBoxComPorts_SelectedIndexChanged(object sender, EventArgs e)
         {
-            serialPort1.PortName = comboBoxComPorts.SelectedItem.ToString();
+            serialPort1.PortName = comboBoxPorts.SelectedItem.ToString();
         }
 
-        private void btnConnect_Click(object sender, EventArgs e)
+        private void buttonConnect_Click(object sender, EventArgs e)
         {
             if (!serialPort1.IsOpen)
             {
                 serialPort1.Open();
-                btnConnect.Text = "Disconnect";
+                buttonConnect.Text = "Disconnect";
             }
             else
             {
                 serialPort1.Close();
-                btnConnect.Text = "Connect";
+                buttonConnect.Text = "Connect";
             }
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            comboBoxComPorts.Items.Clear();
-            comboBoxComPorts.Items.AddRange(System.IO.Ports.SerialPort.GetPortNames());
-            if (comboBoxComPorts.Items.Count == 0)
+            comboBoxPorts.Items.Clear();
+            comboBoxPorts.Items.AddRange(System.IO.Ports.SerialPort.GetPortNames());
+            if (comboBoxPorts.Items.Count == 0)
             {
-                comboBoxComPorts.Text = "No COM Ports!";
+                comboBoxPorts.Text = "No COM Ports!";
             }
             else
             {
-                comboBoxComPorts.SelectedIndex = 0;
+                comboBoxPorts.SelectedIndex = 0;
             }
             comboBoxMotorType.Items.Clear();
             comboBoxMotorType.Items.Add("Stepper Motor");
@@ -172,25 +170,7 @@ namespace MECH_423_Lab_3
             // Get the command byte
             commandByte = getCommandByte();
 
-            // Transmit the command to the COM port
-            if (serialPort1.IsOpen)
-            {
-                try
-                {
-                    byte[] packet = new byte[] { 255, speedHigh, speedLow, commandByte };
-                    serialPort1.Write(packet, 0, packet.Length);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error: " + ex.Message);
-                }
-            }
-
-            // Update the textboxes
-            textBoxStartByte.Text = "255";
-            textBoxDutyCycleHigh.Text = speedHigh.ToString();
-            textBoxDutyCycleLow.Text = speedLow.ToString();
-            textBoxCommandByte.Text = commandByte.ToString();
+            sendPacket(255, speedHigh, speedLow, commandByte);
         }
 
         private void comboBoxMotorType_SelectedIndexChanged(object sender, EventArgs e)
@@ -216,25 +196,7 @@ namespace MECH_423_Lab_3
             // Get the command byte
             commandByte = getCommandByte();
 
-            // Transmit the command to the COM port
-            if (serialPort1.IsOpen)
-            {
-                try
-                {
-                    byte[] packet = new byte[] { 255, 0, 0, commandByte };
-                    serialPort1.Write(packet, 0, packet.Length);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error: " + ex.Message);
-                }
-            }
-
-            // Update the textboxes
-            textBoxStartByte.Text = "255";
-            textBoxDutyCycleHigh.Text = "0";
-            textBoxDutyCycleLow.Text = "0";
-            textBoxCommandByte.Text = commandByte.ToString();
+            sendPacket(255, 0, 0, commandByte);
         }
 
         private void buttonStepCW_Click(object sender, EventArgs e)
@@ -248,25 +210,7 @@ namespace MECH_423_Lab_3
             // Get the command byte
             commandByte = getCommandByte();
 
-            // Transmit the command to the COM port
-            if (serialPort1.IsOpen)
-            {
-                try
-                {
-                    byte[] packet = new byte[] { 255, 0, 0, commandByte };
-                    serialPort1.Write(packet, 0, packet.Length);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error: " + ex.Message);
-                }
-            }
-
-            // Update the textboxes
-            textBoxStartByte.Text = "255";
-            textBoxDutyCycleHigh.Text = "0";
-            textBoxDutyCycleLow.Text = "0";
-            textBoxCommandByte.Text = commandByte.ToString();
+            sendPacket(255, 0, 0, commandByte);
         }
 
         private void timer1_Tick(object sender, EventArgs e)
@@ -305,9 +249,6 @@ namespace MECH_423_Lab_3
                             countLow = 255;
                         }
 
-                        lstBoxData.Items.Add((countHigh).ToString() + " " + (countLow).ToString() + " " + (countCommand).ToString());
-                        lstBoxData.SelectedIndex = lstBoxData.Items.Count - 1;
-
                         // Combine countHigh and countLow into one value
                         countCurrent = (short)((countHigh << 8) | countLow);
                         //countCurrent = (short)(countTrue - zeroCount);
@@ -319,7 +260,7 @@ namespace MECH_423_Lab_3
 
                         // Calculate rotational velocity in Hz and RPM
                         rotations = countDifference / CountsPerRotation;
-                        double velocityHz = rotations / (samplingTime / 1000.0);
+                        double velocityHz = rotations / (SamplingTime / 1000.0);
                         double velocityRPM = velocityHz * 60;
 
                         // Update the textboxes with the calculated velocities
@@ -327,18 +268,16 @@ namespace MECH_423_Lab_3
                         textBoxPosition.Text = countCurrent.ToString(); // Need to modify this to display the correct value, probably loops back to 0 after some count and needs to divide by count/cm
 
                         // Update chart
-                        time += samplingTime;
-                        chart1.Series["Position"].Points.AddXY(time/1000.0, countCurrent);
-                        chart1.Series["Velocity"].Points.AddXY(time/1000.0, velocityRPM);
+                        time += SamplingTime;
+                        chart1.Series["Position"].Points.AddXY(time / 1000.0, countCurrent);
+                        chart1.Series["Velocity"].Points.AddXY(time / 1000.0, velocityRPM);
                         if (chart1.Series["Position"].Points.Count > 200)
                         {
-                            chart1.ChartAreas["ChartArea1"].Axes[0].Minimum = (time - 200 * samplingTime) / 1000.0;
+                            chart1.ChartAreas["ChartArea1"].Axes[0].Minimum = (time - 200 * SamplingTime) / 1000.0;
                         }
 
                         state = 0;
-                        textBoxHigh.Text = countHigh.ToString();
-                        textBoxLow.Text = countLow.ToString();
-                        textBoxCombinedCount.Text = countCurrent.ToString();
+                        textBoxDistance.Text = (countCurrent/60.0).ToString("F2");
                         //DetermineOrientation();
                         break;
                 }
@@ -362,21 +301,9 @@ namespace MECH_423_Lab_3
             }
         }
 
-        private void btnZero_Click(object sender, EventArgs e)
+        private void buttonZeroCount_Click(object sender, EventArgs e)
         {
-            // Transmit the command to the COM port
-            if (serialPort1.IsOpen)
-            {
-                try
-                {
-                    byte[] packet = new byte[] { 255, 0, 0, 0b00100000 };
-                    serialPort1.Write(packet, 0, packet.Length);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error: " + ex.Message);
-                }
-            }
+            sendPacket(255, 0, 0, 0b00100000);
         }
 
         private void btnSave_Click(object sender, EventArgs e)
@@ -423,11 +350,10 @@ namespace MECH_423_Lab_3
             }
         }
 
-
-        private void button1_Click(object sender, EventArgs e)
+        private void buttonSetDutyCycle_Click(object sender, EventArgs e)
         {
             int val;
-            int.TryParse(textBox1.Text, out val);
+            int.TryParse(textBoxTargetDutyCycle.Text, out val);
             System.Console.Out.WriteLine(val.ToString());
             val = 200 + val * 2;
             trackBar1.Value = val;
@@ -439,6 +365,39 @@ namespace MECH_423_Lab_3
             trackBar1.Value = 200;
             trackBar1_Scroll(sender, e);
         }
+
+        private void buttonSetDistance_Click(object sender, EventArgs e)
+        {
+            short distance = Convert.ToInt16(Convert.ToDouble(textBoxTargetDistance.Text) * 60.0);
+            byte distanceHigh = (byte)(distance >> 8);
+            byte distanceLow = (byte)(distance & 0xFF);
+
+            sendPacket(255, distanceHigh, distanceLow, 0b01000000);
+        }
+
+        private void sendPacket(byte byte0, byte byte1, byte byte2, byte byte3)
+        {
+            // Transmit the command to the COM port
+            if (serialPort1.IsOpen)
+            {
+                try
+                {
+                    byte[] packet = new byte[] { byte0, byte1, byte2, byte3 };
+                    serialPort1.Write(packet, 0, packet.Length);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error: " + ex.Message);
+                }
+            }
+
+            // Update the textboxes
+            textBoxStartByte.Text = byte0.ToString();
+            textBoxDutyCycleHigh.Text = byte1.ToString();
+            textBoxDutyCycleLow.Text = byte2.ToString();
+            textBoxCommandByte.Text = byte3.ToString();
+        }
+
     }
 }
 
