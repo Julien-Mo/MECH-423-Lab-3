@@ -11,25 +11,29 @@ namespace MECH_423_Lab_3
 {
     public partial class MotorControl : Form
     {
-        private const double CountsPerRotation = 244;
+        // Constants
+        private const double CountsPerRotation = 244.0;
+        private const double CountsPerCm = 60.0;
+        private const double MillisecondsPerSecond = 1000.0;
+        private const int SecondsPerMinute = 60;
         private const int SamplingTime = 50;
+
+        // Variables
         private ConcurrentQueue<Byte> dataQueue = new ConcurrentQueue<Byte>();
-        private int state = 0;
-        private bool isStepperMotor = true;
-        private bool isRunContinuously = true;
-        private bool isReverse = false;
-        private byte speedHigh = 0;
-        private byte speedLow = 0;
-        private byte commandByte = 0;
-        private byte countLow = 0;
-        private byte countHigh = 0;
-        private byte countCommand = 0;
-        private short countCurrent = 0;
-        private short countPrevious = 0;
-        private short countTrue = 0;
-        private int countDifference = 0;
-        private double rotations = 0.0;
+        private double midPoint = 0;
+        private int count = 0;
         private int time = 0;
+
+        // Command Bits
+        private bool isSetDistance = false;
+        private bool isZeroCount = false;
+        private bool isStepperMotor = false;
+        private bool isSingleSteps = false;
+        private bool isReverse = false;
+
+        // Data Bytes
+        private byte byteHigh = 0;
+        private byte byteLow = 0;
 
         public MotorControl()
         {
@@ -52,6 +56,7 @@ namespace MECH_423_Lab_3
             Series velocitySeries = new Series("Velocity");
             velocitySeries.ChartType = SeriesChartType.Line;
             chart1.Series.Add(velocitySeries);
+
             chart1.ChartAreas[0].AxisY.Maximum = 400;
             chart1.ChartAreas[0].AxisY.Minimum = -400;
         }
@@ -61,17 +66,15 @@ namespace MECH_423_Lab_3
             serialPort1.PortName = comboBoxPorts.SelectedItem.ToString();
         }
 
-        private void buttonConnect_Click(object sender, EventArgs e)
+        private void comboBoxMotorType_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (!serialPort1.IsOpen)
+            if (comboBoxMotorType.SelectedIndex == 0)
             {
-                serialPort1.Open();
-                buttonConnect.Text = "Disconnect";
+                isStepperMotor = false;
             }
             else
             {
-                serialPort1.Close();
-                buttonConnect.Text = "Connect";
+                isStepperMotor = true;
             }
         }
 
@@ -88,140 +91,75 @@ namespace MECH_423_Lab_3
                 comboBoxPorts.SelectedIndex = 0;
             }
             comboBoxMotorType.Items.Clear();
-            comboBoxMotorType.Items.Add("Stepper Motor");
             comboBoxMotorType.Items.Add("DC Motor");
+            comboBoxMotorType.Items.Add("Stepper Motor");
             comboBoxMotorType.SelectedIndex = 0;
 
             timer1.Enabled = true;
             timer1.Interval = 100;
         }
 
-        private byte getCommandByte()
+        private void buttonConnect_Click(object sender, EventArgs e)
         {
-            // Process command byte (0x000ABCDE)
-            byte commandByte = 0;
-
-            // A = 1 (Stepper Motor), 0 (DC Motor)
-            if (isStepperMotor)
+            if (!serialPort1.IsOpen)
             {
-                commandByte |= 0b00010000;
+                serialPort1.Open();
+                buttonConnect.Text = "Disconnect";
             }
-
-            // B = 1 (Run Continuously), 0 (Single Step)
-            if (isRunContinuously)
+            else
             {
-                commandByte |= 0b00001000;
+                serialPort1.Close();
+                buttonConnect.Text = "Connect";
             }
-
-            // C = 1 (Reverse), 0 (Forward)
-            if (isReverse)
-            {
-                commandByte |= 0b00000100;
-            }
-
-            // D = 1 (Set Duty Cycle High to 255), 0 (Do Nothing)
-            if (speedHigh == 255)
-            {
-                commandByte |= 0b00000010;
-                speedHigh = 254;
-            }
-
-            // E = 1 (Set Duty Cycle Low to 255), 0 (Do Nothing)
-            if (speedLow == 255)
-            {
-                commandByte |= 0b00000001;
-                speedLow = 254;
-            }
-
-            return commandByte;
         }
 
         private void trackBar1_Scroll(object sender, EventArgs e)
         {
-            int trackBarValue = trackBar1.Value;
-            int numberOfTicks = trackBar1.Maximum - trackBar1.Minimum;
+            midPoint = (trackBar1.Maximum - trackBar1.Minimum) / 2.0;
+            double scalingFactor = UInt16.MaxValue / midPoint;
 
-            // Use the constant value for counts per rotation
-            double scalingFactor = 65535 / (numberOfTicks / 2.0);
-
-            // Map the trackbar value to the duty cycle (0 at middle, countsPerRotation at extremes)
-            ushort mappedSpeed = (ushort)(Math.Abs(trackBarValue - numberOfTicks / 2.0) * scalingFactor);
-
-            // Update the textbox with the mapped speed
-            textBoxDutyCycle.Text = ((double)mappedSpeed / 65535).ToString("P0");
+            // Map the trackbar value to the duty cycle
+            ushort dutyCycle = (ushort)(Math.Abs(trackBar1.Value - midPoint) * scalingFactor);
+            textBoxDutyCycle.Text = ((double)dutyCycle / UInt16.MaxValue).ToString("P0");
 
             // Split the mapped speed into two bytes
-            speedHigh = (byte)(mappedSpeed >> 8);
-            speedLow = (byte)(mappedSpeed & 0xFF);
+            byteHigh = (byte)(dutyCycle >> 8);
+            byteLow = (byte)(dutyCycle & 0xFF);
 
             // Determine the direction of the motor
-            if (trackBarValue < numberOfTicks / 2)
+            if (trackBar1.Value < midPoint)
             {
                 isReverse = true;
             }
-            else
-            {
-                isReverse = false;
-            }
 
-            // Set the stepper to run continuously
-            isRunContinuously = true;
-
-            // Get the command byte
-            commandByte = getCommandByte();
-
-            sendPacket(255, speedHigh, speedLow, commandByte);
-        }
-
-        private void comboBoxMotorType_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (comboBoxMotorType.SelectedIndex == 0)
-            {
-                isStepperMotor = true;
-            }
-            else
-            {
-                isStepperMotor = false;
-            }
-        }
-
-        private void buttonStepCCW_Click(object sender, EventArgs e)
-        {
-            // Determine the direction of the motor
-            isReverse = true;
-
-            // Set the stepper to single steps
-            isRunContinuously = false;
-
-            // Get the command byte
-            commandByte = getCommandByte();
-
-            sendPacket(255, 0, 0, commandByte);
+            sendPacket(Byte.MaxValue, byteHigh, byteLow, getCommandByte());
         }
 
         private void buttonStepCW_Click(object sender, EventArgs e)
         {
-            // Determine the direction of the motor
-            isReverse = false;
+            isSingleSteps = true;
+            sendPacket(Byte.MaxValue, 0, 0, getCommandByte());
+        }
 
-            // Set the stepper to single steps
-            isRunContinuously = false;
-
-            // Get the command byte
-            commandByte = getCommandByte();
-
-            sendPacket(255, 0, 0, commandByte);
+        private void buttonStepCCW_Click(object sender, EventArgs e)
+        {
+            isReverse = true;
+            isSingleSteps = true;
+            sendPacket(Byte.MaxValue, 0, 0, getCommandByte());
         }
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            byte dequeuedItem;
-            while (dataQueue.TryDequeue(out dequeuedItem))
+            byte countHigh = 0;
+            byte countLow = 0;
+            byte countCommand = 0;
+            int state = 0;
+            while (dataQueue.TryDequeue(out byte dequeuedItem))
             {
                 switch (state)
                 {
                     case 0:
-                        if (dequeuedItem == 255)
+                        if (dequeuedItem == Byte.MaxValue)
                         {
                             state = 1;
                         }
@@ -236,77 +174,69 @@ namespace MECH_423_Lab_3
                         break;
                     case 3:
                         countCommand = dequeuedItem;
-
-                        // D = 1 (Set Duty Cycle High to 255), 0 (Do Nothing)
-                        if ((countCommand & 0b00000010) != 0)
-                        {
-                            countHigh = 255;
-                        }
-
-                        // E = 1 (Set Duty Cycle Low to 255), 0 (Do Nothing)
-                        if ((countCommand & 0b00000001) != 0)
-                        {
-                            countLow = 255;
-                        }
-
-                        // Combine countHigh and countLow into one value
-                        countCurrent = (short)((countHigh << 8) | countLow);
-                        //countCurrent = (short)(countTrue - zeroCount);
-                        countDifference = countCurrent - countPrevious;
-                        countPrevious = countCurrent;
-
-                        // Calculate rotational velocity in Hz and RPM
-                        rotations = countDifference / CountsPerRotation;
-
-                        // Calculate rotational velocity in Hz and RPM
-                        rotations = countDifference / CountsPerRotation;
-                        double velocityHz = rotations / (SamplingTime / 1000.0);
-                        double velocityRPM = velocityHz * 60;
-
-                        // Update the textboxes with the calculated velocities
-                        textBoxVelocity.Text = velocityRPM.ToString("F2");
-                        textBoxPosition.Text = countCurrent.ToString(); // Need to modify this to display the correct value, probably loops back to 0 after some count and needs to divide by count/cm
-
-                        // Update chart
-                        time += SamplingTime;
-                        chart1.Series["Position"].Points.AddXY(time / 1000.0, countCurrent);
-                        chart1.Series["Velocity"].Points.AddXY(time / 1000.0, velocityRPM);
-                        if (chart1.Series["Position"].Points.Count > 200)
-                        {
-                            chart1.ChartAreas["ChartArea1"].Axes[0].Minimum = (time - 200 * SamplingTime) / 1000.0;
-                        }
-
                         state = 0;
-                        textBoxDistance.Text = (countCurrent/60.0).ToString("F2");
-                        //DetermineOrientation();
+                        processData(countHigh, countLow, countCommand);
                         break;
                 }
-                //textBoxSerialDataStream.AppendText(dequeuedItem.ToString() + ", ");
+            }
+        }
+
+        private void processData(byte countHigh, byte countLow, byte countCommand)
+        {
+            // D = 1 (Set Duty Cycle High to 255), 0 (Do Nothing)
+            if ((countCommand & (1 << 1)) != 0)
+            {
+                countHigh = Byte.MaxValue;
+            }
+
+            // E = 1 (Set Duty Cycle Low to 255), 0 (Do Nothing)
+            if ((countCommand & (1 << 0)) != 0)
+            {
+                countLow = Byte.MaxValue;
+            }
+
+            // Combine countHigh and countLow into one 16-bit value
+            short currentCount = (short)((countHigh << 8) | countLow);
+            int difference = currentCount - count;
+            count = currentCount;
+
+            // Calculate rotational velocity in Hz and RPM
+            double rotations = difference / CountsPerRotation;
+            double velocityHz = rotations / (SamplingTime / MillisecondsPerSecond);
+            double velocityRPM = velocityHz * SecondsPerMinute;
+
+            // Update the textboxes with the calculated velocities
+            textBoxVelocity.Text = velocityRPM.ToString("F2");
+            textBoxPosition.Text = count.ToString();
+            textBoxDistance.Text = (currentCount / CountsPerCm).ToString("F2");
+
+            // Update chart
+            time += SamplingTime;
+            chart1.Series["Position"].Points.AddXY(time / MillisecondsPerSecond, count);
+            chart1.Series["Velocity"].Points.AddXY(time / MillisecondsPerSecond, velocityRPM);
+            if (chart1.Series["Position"].Points.Count > 200)
+            {
+                chart1.ChartAreas["ChartArea1"].Axes[0].Minimum = (time - 200 * SamplingTime) / MillisecondsPerSecond;
             }
         }
 
         private void serialPort1_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
         {
-            // Determine the number of BytesToRead in the serial buffer
-            // Write a while loop to read the bytes, one at a time, from the serial buffer
-            // Convert each byte to a string and append it to the serialDataString with “,“ and “ “ characters.
-            int newByte = 0;
-            int bytesToRead;
-            bytesToRead = serialPort1.BytesToRead;
-            while (bytesToRead != 0)
+            // Read the bytes from the serial buffer and store them in the dataQueue
+            while (serialPort1.BytesToRead > 0)
             {
-                newByte = serialPort1.ReadByte();
+                int newByte = serialPort1.ReadByte();
                 dataQueue.Enqueue((byte)newByte);
-                bytesToRead = serialPort1.BytesToRead;
             }
         }
 
         private void buttonZeroCount_Click(object sender, EventArgs e)
         {
-            sendPacket(255, 0, 0, 0b00100000);
+            isZeroCount = true;
+            sendPacket(Byte.MaxValue, 0, 0, getCommandByte());
         }
 
-        private void btnSave_Click(object sender, EventArgs e)
+        private void buttonSave_Click(object sender, EventArgs e)
         {
             saveFileDialog.Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*";
             saveFileDialog.ShowDialog();
@@ -352,27 +282,91 @@ namespace MECH_423_Lab_3
 
         private void buttonSetDutyCycle_Click(object sender, EventArgs e)
         {
-            int val;
-            int.TryParse(textBoxTargetDutyCycle.Text, out val);
-            System.Console.Out.WriteLine(val.ToString());
-            val = 200 + val * 2;
-            trackBar1.Value = val;
-            trackBar1_Scroll(sender, e);
+            if (int.TryParse(textBoxTargetDutyCycle.Text, out int targetDutyCycle))
+            {
+                trackBar1.Value = targetDutyCycle * 2 + (int)midPoint;
+                trackBar1_Scroll(sender, e);
+            }
         }
 
         private void buttonZeroDutyCycle_Click(object sender, EventArgs e)
-        {
-            trackBar1.Value = 200;
+        {   
+            trackBar1.Value = (int)midPoint;
             trackBar1_Scroll(sender, e);
         }
 
         private void buttonSetDistance_Click(object sender, EventArgs e)
         {
-            short distance = Convert.ToInt16(Convert.ToDouble(textBoxTargetDistance.Text) * 60.0);
-            byte distanceHigh = (byte)(distance >> 8);
-            byte distanceLow = (byte)(distance & 0xFF);
+            if (double.TryParse(textBoxTargetDistance.Text, out double targetDistance))
+            {
+                // Convert the distance from cm to counts
+                short distance = Convert.ToInt16(targetDistance * CountsPerCm);
+                byteHigh = (byte)(distance >> 8);
+                byteLow = (byte)(distance & 0xFF);
+                isSetDistance = true;
+                sendPacket(Byte.MaxValue, byteHigh, byteLow, getCommandByte());
+            }
+        }
 
-            sendPacket(255, distanceHigh, distanceLow, 0b01000000);
+        private byte getCommandByte()
+        {
+            // Process command byte (0xABCDEFGH)
+            byte commandByte = 0;
+
+            // A: Always 0
+
+            // B: Set Distance Toggle (0 = No, 1 = Yes)
+            if (isSetDistance)
+            {
+                commandByte |= (1 << 6);
+            }
+
+            // C: Zero Count Toggle (0 = No, 1 = Yes)
+            if (isZeroCount)
+            {
+                commandByte |= (1 << 5);
+            }
+
+            // D: Motor Select (0 = DC Motor, 1 = Stepper Motor)
+            if (isStepperMotor)
+            {
+                commandByte |= (1 << 4);
+            }
+
+            // E: Stepper Motor Mode (0 = Run Continuously, 1 = Single Steps)
+            if (isSingleSteps)
+            {
+                commandByte |= (1 << 3);
+            }
+
+            // F: Direction (0 = Forward, 1 = Reverse)
+            if (isReverse)
+            {
+                commandByte |= (1 << 2);
+            }
+
+            // G: High Escape Byte (0 = Do Nothing, 1 = Set High Byte to 255)
+            if (byteHigh == Byte.MaxValue)
+            {
+                commandByte |= (1 << 1);
+                byteHigh = Byte.MaxValue - 1;
+            }
+
+            // F: Low Escape Byte  (0 = Do Nothing, 1 = Set Low Byte to 255)
+            if (byteLow == Byte.MaxValue)
+            {
+                commandByte |= (1 << 0);
+                byteLow = Byte.MaxValue - 1;
+            }
+
+            // Reset the boolean flags
+            isSetDistance = false;
+            isZeroCount = false;
+            isStepperMotor = false;
+            isSingleSteps = false;
+            isReverse = false;
+
+            return commandByte;
         }
 
         private void sendPacket(byte byte0, byte byte1, byte byte2, byte byte3)
@@ -395,9 +389,8 @@ namespace MECH_423_Lab_3
             textBoxStartByte.Text = byte0.ToString();
             textBoxDutyCycleHigh.Text = byte1.ToString();
             textBoxDutyCycleLow.Text = byte2.ToString();
-            textBoxCommandByte.Text = byte3.ToString();
+            textBoxCommandByte.Text = Convert.ToString(byte3, 2).PadLeft(8, '0');
         }
-
     }
 }
 
