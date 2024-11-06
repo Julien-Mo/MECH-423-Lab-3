@@ -5,6 +5,8 @@ VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MECH 423 Lab 3", "MECH 423 Lab 3.csproj", "{EE2D6F8D-A14D-473A-BAD1-EF1C0E119AAA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Image Processing Test", "..\MECH423\Image Processing Test\Image Processing Test\Image Processing Test.csproj", "{B72AE0A1-CF20-4192-A147-A6FE8763CF96}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{EE2D6F8D-A14D-473A-BAD1-EF1C0E119AAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EE2D6F8D-A14D-473A-BAD1-EF1C0E119AAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EE2D6F8D-A14D-473A-BAD1-EF1C0E119AAA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B72AE0A1-CF20-4192-A147-A6FE8763CF96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B72AE0A1-CF20-4192-A147-A6FE8763CF96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B72AE0A1-CF20-4192-A147-A6FE8763CF96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B72AE0A1-CF20-4192-A147-A6FE8763CF96}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
