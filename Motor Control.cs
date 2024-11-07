@@ -34,6 +34,12 @@ namespace MECH_423_Lab_3
         // Data Bytes
         private byte byteHigh = 0;
         private byte byteLow = 0;
+        private byte byteXHigh = 0;
+        private byte byteXLow = 0;
+        private byte byteYHigh = 0;
+        private byte byteYLow = 0;
+        private byte byteSpeedHigh = 0;
+        private byte byteSpeedLow = 0;
 
         public MotorControl()
         {
@@ -313,7 +319,7 @@ namespace MECH_423_Lab_3
             // Process command byte (0xABCDEFGH)
             byte commandByte = 0;
 
-            // A: Always 0
+            // A: Set 2 Axis Movement (0 = No, 1 = Yes)
 
             // B: Set Distance Toggle (0 = No, 1 = Yes)
             if (isSetDistance)
@@ -387,9 +393,113 @@ namespace MECH_423_Lab_3
 
             // Update the textboxes
             textBoxStartByte.Text = byte0.ToString();
-            textBoxDutyCycleHigh.Text = byte1.ToString();
-            textBoxDutyCycleLow.Text = byte2.ToString();
+            textBoxXHigh.Text = byte1.ToString();
+            textBoxXLow.Text = byte2.ToString();
             textBoxCommandByte.Text = Convert.ToString(byte3, 2).PadLeft(8, '0');
+        }
+
+        private void buttonSendCommand_Click(object sender, EventArgs e)
+        {
+            if (double.TryParse(textBoxTargetX.Text, out double targetX) && double.TryParse(textBoxTargetY.Text, out double targetY) && double.TryParse(textBoxTargetSpeed.Text, out double targetSpeed))
+            {
+                // DC Motor
+                short distanceX = Convert.ToInt16(targetX * CountsPerCm);
+                byteXHigh = (byte)(distanceX >> 8);
+                byteXLow = (byte)(distanceX & 0xFF);
+
+                // Stepper Motor
+                short distanceY = Convert.ToInt16(targetY * CountsPerCm);
+                byteYHigh = (byte)(distanceY >> 8);
+                byteYLow = (byte)(distanceY & 0xFF);
+
+                // Speed
+                short speed = (short)(Convert.ToInt16(targetSpeed) / 100.0 * UInt16.MaxValue);
+                byteSpeedHigh = (byte)(speed >> 8);
+                byteSpeedLow = (byte)(speed & 0xFF);
+
+                send2AxisPacket(Byte.MaxValue, byteXHigh, byteXLow, byteYHigh, byteYLow, byteSpeedHigh, byteSpeedLow, get2AxisCommandByte());
+            }
+        }
+
+        private byte get2AxisCommandByte()
+        {
+            // Process command byte (0xABCDEFGH)
+            byte commandByte = 0;
+
+            // A: Set 2 Axis Movement (0 = No, 1 = Yes)
+            commandByte |= (1 << 7);
+
+            // B: Always 0
+
+            // C: Speed High Escape Byte (0 = Do Nothing, 1 = Set High Byte to 255)
+            if (byteSpeedHigh == Byte.MaxValue)
+            {
+                commandByte |= (1 << 5);
+                byteSpeedHigh = Byte.MaxValue - 1;
+            }
+
+            // D: Speed Low Escape Byte (0 = Do Nothing, 1 = Set Low Byte to 255)
+            if (byteSpeedLow == Byte.MaxValue)
+            {
+                commandByte |= (1 << 4);
+                byteSpeedLow = Byte.MaxValue - 1;
+            }
+
+            // E: Y High Escape Byte (0 = Do Nothing, 1 = Set High Byte to 255)
+            if (byteYHigh == Byte.MaxValue)
+            {
+                commandByte |= (1 << 3);
+                byteYHigh = Byte.MaxValue - 1;
+            }
+
+            // F: Y Low Escape Byte (0 = Do Nothing, 1 = Set Low Byte to 255)
+            if (byteYLow == Byte.MaxValue)
+            {
+                commandByte |= (1 << 2);
+                byteYLow = Byte.MaxValue - 1;
+            }
+
+            // G: X High Escape Byte (0 = Do Nothing, 1 = Set High Byte to 255)
+            if (byteXHigh == Byte.MaxValue)
+            {
+                commandByte |= (1 << 1);
+                byteXHigh = Byte.MaxValue - 1;
+            }
+
+            // F: X Low Escape Byte  (0 = Do Nothing, 1 = Set Low Byte to 255)
+            if (byteXLow == Byte.MaxValue)
+            {
+                commandByte |= (1 << 0);
+                byteXLow = Byte.MaxValue - 1;
+            }
+
+            return commandByte;
+        }
+        private void send2AxisPacket(byte byte0, byte byte1, byte byte2, byte byte3, byte byte4, byte byte5, byte byte6, byte byte7)
+        {
+            // Transmit the command to the COM port
+            if (serialPort1.IsOpen)
+            {
+                try
+                {
+                    byte[] packet = new byte[] { byte0, byte1, byte2, byte3, byte4, byte5, byte6, byte7 };
+                    serialPort1.Write(packet, 0, packet.Length);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error: " + ex.Message);
+                }
+            }
+
+            // Update the textboxes
+            textBoxStartByte.Text = byte0.ToString();
+            textBoxXHigh.Text = byte1.ToString();
+            textBoxXLow.Text = byte2.ToString();
+            textBoxYHigh.Text = byte3.ToString();
+            textBoxYLow.Text = byte4.ToString();
+            textBoxSpeedHigh.Text = byte5.ToString();
+            textBoxSpeedLow.Text = byte6.ToString();
+            textBoxCommandByte.Text = Convert.ToString(byte7, 2).PadLeft(8, '0');
         }
     }
 }
